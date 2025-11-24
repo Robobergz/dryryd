@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DRY RYD</title>
+
+  <style>
+    :root{
+      --stack-width: clamp(220px, 28vw, 330px);
+      --protection-height: clamp(10px, 1.8vw, 18px);
+
+      /* RAIN sizing (relative to stack) */
+      --rain-width-ratio: 0.26;
+      --rain-height-ratio: 1.15;
+      --rain-gap-ratio: 0.85;
+
+      --rain-color: #000;
+      --bg-rain-color: rgba(0,0,0,0.14); /* darker per feedback */
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: #fff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      color: #000;
+    }
+
+    /* Background rain canvas */
+    #bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Page centers the full logo block together */
+    .page {
+      position: relative;
+      z-index: 2;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;  /* vertical centering */
+      align-items: center;      /* horizontal centering */
+    }
+
+    .stack {
+      width: var(--stack-width);
+      display: grid;
+      place-items: center;
+      row-gap: calc(var(--protection-height) * var(--rain-gap-ratio));
+    }
+
+    /* RAIN (3 vertical bars) */
+    .rain {
+      width: calc(var(--stack-width) * var(--rain-width-ratio));
+      height: calc(var(--stack-width) * var(--rain-width-ratio) * var(--rain-height-ratio));
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 12%;
+      opacity: 1;
+    }
+
+    .drop {
+      width: 18%;
+      background: var(--rain-color);
+      transform: translateY(-45%) scaleY(0.1);
+      opacity: 0;
+      animation: dropFall 4s infinite;
+      align-self: flex-end;
+    }
+
+    /* side drops shorter than center drop */
+    .drop:nth-child(1){ height: 70%; animation-delay: 0s; }
+    .drop:nth-child(2){ height: 100%; animation-delay: 0.25s; }
+    .drop:nth-child(3){ height: 70%; animation-delay: 0.5s; }
+
+    /* PROTECTION clip boundary (invisible) */
+    .protection {
+      width: 100%;
+      height: var(--protection-height);
+      background: transparent;
+    }
+
+    /* Wordmark / letters asset (includes visible PROTECTION bar) */
+    .wordmark {
+      width: 100%;
+      height: auto;
+      display: block;
+      margin-top: 0;
+    }
+
+    /* CONTACT link pinned near bottom center */
+    .contact {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 9vh;
+      font-size: clamp(14px, 1.6vw, 18px);
+      letter-spacing: 0.02em;
+      text-decoration: none;
+      color: #000;
+      z-index: 3;
+    }
+    .contact:hover { opacity: 0.65; }
+
+    /* Rain animation: top->bottom, sequential left->right, fade at end */
+    @keyframes dropFall {
+      0%   { transform: translateY(-45%) scaleY(0.1); opacity: 0; }
+      10%  { opacity: 1; }
+      45%  { transform: translateY(0%) scaleY(1); opacity: 1; }
+      80%  { opacity: 1; }
+      100% { transform: translateY(0%) scaleY(1); opacity: 0; }
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="bg"></canvas>
+
+  <main class="page">
+    <section class="stack" aria-label="Dry Ryd logo">
+      <!-- RAIN -->
+      <div class="rain" aria-hidden="true">
+        <div class="drop"></div>
+        <div class="drop"></div>
+        <div class="drop"></div>
+      </div>
+
+      <!-- Invisible clip helper (kept for semantic clarity) -->
+      <div class="protection" id="protection"></div>
+
+      <!-- Letters / wordmark asset -->
+      <img
+        class="wordmark"
+        id="wordmark"
+        src="./DryRYd_logoBTM@4x.png"
+        alt="DRY RYD"
+        loading="eager"
+        decoding="async"
+      />
+    </section>
+  </main>
+
+  <!-- CONTACT -->
+  <a
+    class="contact"
+    href="mailto:staydry@dryryd.com?subject=Rain%20Check%3F%20Actually%2C%20I'm%20Ready%20to%20Talk%20Now"
+  >
+    CONTACT
+  </a>
+
+  <script>
+    // Background light-gray falling rain.
+    // Requirements:
+    // 1) constant rain
+    // 2) NEVER draw rain on top of the logo image (protection blocks everything below)
+
+    const canvas = document.getElementById("bg");
+    const ctx = canvas.getContext("2d", { alpha: true });
+    const wordmarkEl = document.getElementById("wordmark");
+
+    let W, H, dpr;
+    let drops = [];
+    const dropCount = 130;
+    const speedMin = 2, speedMax = 6;
+    const lengthMin = 12, lengthMax = 30;
+
+    function resize(){
+      dpr = window.devicePixelRatio || 1;
+      W = window.innerWidth;
+      H = window.innerHeight;
+      canvas.width = Math.floor(W * dpr);
+      canvas.height = Math.floor(H * dpr);
+      canvas.style.width = W + "px";
+      canvas.style.height = H + "px";
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      initDrops();
+    }
+
+    function initDrops(){
+      drops = [];
+      for(let i=0;i<dropCount;i++){
+        drops.push(makeDrop(true));
+      }
+    }
+
+    function makeDrop(randomY=false){
+      const x = Math.random() * W;
+      const y = randomY ? Math.random() * H : -Math.random() * H * 0.2;
+      const speed = speedMin + Math.random() * (speedMax - speedMin);
+      const len = lengthMin + Math.random() * (lengthMax - lengthMin);
+      return { x, y, speed, len };
+    }
+
+    function getWordmarkRect(){
+      const r = wordmarkEl.getBoundingClientRect();
+      return {
+        left: r.left,
+        top: r.top,
+        width: r.width,
+        height: r.height
+      };
+    }
+
+    function tick(){
+      ctx.clearRect(0,0,W,H);
+
+      const imgRect = getWordmarkRect();
+
+      ctx.strokeStyle = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-rain-color").trim() || "rgba(0,0,0,0.14)";
+      ctx.lineWidth = 1;
+      ctx.lineCap = "round";
+
+      for(const d of drops){
+        ctx.beginPath();
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x, d.y + d.len);
+        ctx.stroke();
+
+        d.y += d.speed;
+
+        if(d.y > H + d.len){
+          const nd = makeDrop(false);
+          d.x = nd.x;
+          d.y = -Math.random() * 80;
+          d.speed = nd.speed;
+          d.len = nd.len;
+        }
+      }
+
+      // Remove any rain that would be drawn over the logo image.
+      // This enforces protection: rain never shows below/through the bar.
+      ctx.clearRect(imgRect.left, imgRect.top, imgRect.width, imgRect.height);
+
+      requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", resize, { passive: true });
+    resize();
+    tick();
+  </script>
+</body>
+</html>
