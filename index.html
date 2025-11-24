@@ -16,7 +16,7 @@
       --rain-gap-ratio: 0.85;
 
       --rain-color: #000;
-      --bg-rain-color: rgba(0,0,0,0.14); /* darker per feedback */
+      --bg-rain-color: rgba(0,0,0,0.14);
     }
 
     html, body {
@@ -27,7 +27,6 @@
       color: #000;
     }
 
-    /* Background rain canvas */
     #bg {
       position: fixed;
       inset: 0;
@@ -35,15 +34,14 @@
       pointer-events: none;
     }
 
-    /* Page centers the full logo block together */
     .page {
       position: relative;
       z-index: 2;
       min-height: 100vh;
       display: flex;
       flex-direction: column;
-      justify-content: center;  /* vertical centering */
-      align-items: center;      /* horizontal centering */
+      justify-content: center;
+      align-items: center;
     }
 
     .stack {
@@ -53,12 +51,12 @@
       row-gap: calc(var(--protection-height) * var(--rain-gap-ratio));
     }
 
-    /* RAIN (3 vertical bars) */
+    /* RAIN (3 vertical bars) - TOP ALIGNED */
     .rain {
       width: calc(var(--stack-width) * var(--rain-width-ratio));
       height: calc(var(--stack-width) * var(--rain-width-ratio) * var(--rain-height-ratio));
       display: flex;
-      align-items: flex-end;
+      align-items: flex-start;   /* top aligned per design */
       justify-content: center;
       gap: 12%;
       opacity: 1;
@@ -67,25 +65,23 @@
     .drop {
       width: 18%;
       background: var(--rain-color);
-      transform: translateY(-45%) scaleY(0.1);
+      transform: translateY(-55%) scaleY(0.1);
       opacity: 0;
       animation: dropFall 4s infinite;
-      align-self: flex-end;
+      align-self: flex-start;   /* keep each bar top-aligned */
+      transform-origin: top;
     }
 
-    /* side drops shorter than center drop */
     .drop:nth-child(1){ height: 70%; animation-delay: 0s; }
     .drop:nth-child(2){ height: 100%; animation-delay: 0.25s; }
     .drop:nth-child(3){ height: 70%; animation-delay: 0.5s; }
 
-    /* PROTECTION clip boundary (invisible) */
     .protection {
       width: 100%;
       height: var(--protection-height);
       background: transparent;
     }
 
-    /* Wordmark / letters asset (includes visible PROTECTION bar) */
     .wordmark {
       width: 100%;
       height: auto;
@@ -93,7 +89,6 @@
       margin-top: 0;
     }
 
-    /* CONTACT link pinned near bottom center */
     .contact {
       position: fixed;
       left: 50%;
@@ -107,9 +102,8 @@
     }
     .contact:hover { opacity: 0.65; }
 
-    /* Rain animation: top->bottom, sequential left->right, fade at end */
     @keyframes dropFall {
-      0%   { transform: translateY(-45%) scaleY(0.1); opacity: 0; }
+      0%   { transform: translateY(-55%) scaleY(0.1); opacity: 0; }
       10%  { opacity: 1; }
       45%  { transform: translateY(0%) scaleY(1); opacity: 1; }
       80%  { opacity: 1; }
@@ -123,17 +117,14 @@
 
   <main class="page">
     <section class="stack" aria-label="Dry Ryd logo">
-      <!-- RAIN -->
       <div class="rain" aria-hidden="true">
         <div class="drop"></div>
         <div class="drop"></div>
         <div class="drop"></div>
       </div>
 
-      <!-- Invisible clip helper (kept for semantic clarity) -->
       <div class="protection" id="protection"></div>
 
-      <!-- Letters / wordmark asset -->
       <img
         class="wordmark"
         id="wordmark"
@@ -145,7 +136,6 @@
     </section>
   </main>
 
-  <!-- CONTACT -->
   <a
     class="contact"
     href="mailto:staydry@dryryd.com?subject=Rain%20Check%3F%20Actually%2C%20I'm%20Ready%20to%20Talk%20Now"
@@ -154,11 +144,6 @@
   </a>
 
   <script>
-    // Background light-gray falling rain.
-    // Requirements:
-    // 1) constant rain
-    // 2) NEVER draw rain on top of the logo image (protection blocks everything below)
-
     const canvas = document.getElementById("bg");
     const ctx = canvas.getContext("2d", { alpha: true });
     const wordmarkEl = document.getElementById("wordmark");
@@ -198,12 +183,7 @@
 
     function getWordmarkRect(){
       const r = wordmarkEl.getBoundingClientRect();
-      return {
-        left: r.left,
-        top: r.top,
-        width: r.width,
-        height: r.height
-      };
+      return { left: r.left, top: r.top, width: r.width, height: r.height };
     }
 
     function tick(){
@@ -233,8 +213,7 @@
         }
       }
 
-      // Remove any rain that would be drawn over the logo image.
-      // This enforces protection: rain never shows below/through the bar.
+      // hard mask logo area so rain never overlaps letters
       ctx.clearRect(imgRect.left, imgRect.top, imgRect.width, imgRect.height);
 
       requestAnimationFrame(tick);
