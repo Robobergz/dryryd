@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>DRY RYD</title>
+<style>
+:root{
+  --stack-width: clamp(176px, 22.4vw, 264px); /* 20% smaller */
+  --protection-height: clamp(8px, 1.44vw, 14px);
+  --rain-width-ratio: 0.26;
+  --rain-height-ratio: 1.15;
+  --rain-gap-ratio: 0.85;
+  --rain-color:#000;
+  --bg-rain-color:rgba(0,0,0,0.14);
+}
+html,body{height:100%;margin:0;background:#fff;font-family:system-ui;color:#000;}
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.page{position:relative;z-index:2;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;}
+.stack{width:var(--stack-width);display:grid;place-items:center;row-gap:calc(var(--protection-height)*var(--rain-gap-ratio));}
+.rain{width:calc(var(--stack-width)*var(--rain-width-ratio));height:calc(var(--stack-width)*var(--rain-width-ratio)*var(--rain-height-ratio));display:flex;align-items:flex-start;justify-content:center;gap:12%;opacity:1;}
+.drop{width:18%;background:var(--rain-color);transform:translateY(-55%) scaleY(0.1);opacity:0;animation:dropFall 4s infinite;align-self:flex-start;transform-origin:top;}
+.drop:nth-child(1){height:70%;animation-delay:0s;}
+.drop:nth-child(2){height:100%;animation-delay:0.25s;}
+.drop:nth-child(3){height:70%;animation-delay:0.5s;}
+.protection{width:100%;height:var(--protection-height);background:transparent;}
+.wordmark{width:100%;height:auto;display:block;margin-top:0;}
+.contact{position:fixed;left:50%;transform:translateX(-50%);bottom:9vh;font-size:clamp(14px,1.6vw,18px);text-decoration:none;color:#000;z-index:3;}
+@keyframes dropFall{
+0%{transform:translateY(-55%) scaleY(0.1);opacity:0;}
+10%{opacity:1;}
+45%{transform:translateY(0) scaleY(1);opacity:1;}
+80%{opacity:1;}
+100%{transform:translateY(0) scaleY(1);opacity:0;}
+}
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<main class="page">
+<section class="stack"><div class="rain"><div class="drop"></div><div class="drop"></div><div class="drop"></div></div>
+<div class="protection" id="protection"></div>
+<img id="wordmark" class="wordmark" src="./DryRYd_logoBTM@4x.png" alt="DRY RYD"/>
+</section>
+</main>
+<a class="contact" href="mailto:staydry@dryryd.com?subject=Rain%20Check%3F%20Actually%2C%20I'm%20Ready%20to%20Talk%20Now">CONTACT</a>
+<script>
+const canvas=document.getElementById("bg");const ctx=canvas.getContext("2d",{alpha:true});const wordmarkEl=document.getElementById("wordmark");
+let W,H,dpr,drops=[];const dropCount=130,speedMin=2,speedMax=6,lengthMin=12,lengthMax=30;
+function resize(){dpr=window.devicePixelRatio||1;W=window.innerWidth;H=window.innerHeight;canvas.width=W*dpr;canvas.height=H*dpr;canvas.style.width=W+"px";canvas.style.height=H+"px";ctx.setTransform(dpr,0,0,dpr,0,0);initDrops();}
+function initDrops(){drops=[];for(let i=0;i<dropCount;i++)drops.push(makeDrop(true));}
+function makeDrop(r=false){const x=Math.random()*W;const y=r?Math.random()*H:-Math.random()*H*.2;const s=speedMin+Math.random()*(speedMax-speedMin);const l=lengthMin+Math.random()*(lengthMax-lengthMin);return{x,y,speed:s,len:l};}
+function getRect(){const r=wordmarkEl.getBoundingClientRect();return{left:r.left,top:r.top,width:r.width,height:r.height};}
+function tick(){ctx.clearRect(0,0,W,H);const img=getRect();ctx.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue("--bg-rain-color").trim();ctx.lineWidth=1;ctx.lineCap="round";
+for(const d of drops){ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(d.x,d.y+d.len);ctx.stroke();d.y+=d.speed;if(d.y>H+d.len){const nd=makeDrop(false);d.x=nd.x;d.y=-Math.random()*80;d.speed=nd.speed;d.len=nd.len;}}
+ctx.clearRect(img.left,img.top,img.width,img.height);
+requestAnimationFrame(tick);}
+window.addEventListener("resize",resize,{passive:true});resize();tick();
+</script>
+</body>
+</html>
